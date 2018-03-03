@@ -1,7 +1,7 @@
 /**
 * Tetris2 样例程序
-* 20181031更新：将elimBonus[count]改为elimBonus[count - hasBonus]。
-* 20181027更新：将trans数组的第二维长度从4加大到6，感谢kczno1用户的指正。
+* 20171031更新：将elimBonus[count]改为elimBonus[count - hasBonus]。
+* 20171027更新：将trans数组的第二维长度从4加大到6，感谢kczno1用户的指正。
 * https://wiki.botzone.org/index.php?title=Tetris2
 */
 // 注意：x的范围是1~MAPWIDTH，y的范围是1~MAPHEIGHT
@@ -91,7 +91,7 @@ const int rotateBlank[7][4][10] = {
 double mark[5][11] = {
 	{ 10,  -0.66,  -1.2,   -1.5, -4.3, -5.5, -5.3,  -11,   0.95,   1.3,  0.67 },
 	{ 10,  -0.82,  -2.5,   -1.4, -1.2, -2.5, -3.8,  -12,   1,      2.3,  1.2  },
-	{ 10,  -1.1,   -2.5,   -2.3, -1.1, -2.2, -2.7,  -7.4,  1,      2.8,  0.6 },
+	{ 10,  -1.1,   -2.5,   -2.3, -1.1, -2.2, -2.7,  -7.4,  1,      2.8,  0.39 },
 	{ 10,  -1.6,   -3.6,   -2.1, -1.2, -2,   -2.8,  -6.4,  1.1,    4.6,  0.6  },
 	//行差，行变换，最高高度，井，  0级洞  1级洞 2级洞  长井 实格评分 消行  迭代系数
 };
@@ -126,9 +126,9 @@ public:
 
 	inline Tetris &set(int x = -1, int y = -1, int o = -1)
 	{
-		blockX = x == -1 ? blockX : x;
-		blockY = y == -1 ? blockY : y;
-		orientation = o == -1 ? orientation : o;
+		blockX = x;
+		blockY = y;
+		orientation = o;
 		return *this;
 	}
 
@@ -424,37 +424,13 @@ namespace Util
 #endif
 	}
 }
-/*
-bool iscanputblock(int X, int Y, int o, int blockType, int currBotColor){
-	//复制当前地图
-	int tempGrid[2][MAPHEIGHT + 5][MAPWIDTH + 5];
-	for (int j = 1; j <= MAPHEIGHT; j++) {
-		for (int k = 1; k <= MAPWIDTH; k++) {
-			tempGrid[currBotColor][j][k] = gridInfo[currBotColor][j][k];
-		}
-	}
 
 
-	auto &def = blockShape[blockType][o];
-	int num = 0;
-	for (int i = 0; i <= MAPWIDTH + 1; i++) {
-		tempGrid[currBotColor][0][i] = 3;
-	}
-	
-	//判断是否为非法落地
-	for (int i = 0; i < 4; i++) {
-		if(tempGrid[currBotColor][Y - 1 + def[i * 2 + 1]][X + def[i * 2]] != 0) num++;
-	}
-	if(num == 0) return false;
-	return true;
-}*/
-
-
-void add(int color,int o,int val)
+void add(int color,int x,int val)
 {
-	typeCountForColor[color][o] += val;
-	if (maxCount[color] < typeCountForColor[color][o]) maxCount[color] = typeCountForColor[color][o];
-	if (minCount[color] > typeCountForColor[color][o]) minCount[color] = typeCountForColor[color][o];
+	typeCountForColor[color][x] +=val;
+	maxCount[color] = *max_element(typeCountForColor[color],typeCountForColor[color] + 7);
+	minCount[color] = *min_element(typeCountForColor[color],typeCountForColor[color] + 7);
 }
 
 int diry[5]={1,-1,0,0};
@@ -471,7 +447,7 @@ void findallfx(int blockType,int color)
 				for (int o = 0; o < 4 ; o++)
 				{
 					if (hzblock.set(x, y, o).isValid()
-						&& Util::checkDirectDropTo(color, blockType, x, y, o) 
+						&& Util::checkDirectDropTo(color, blockType, x, y, o)
 						)
 						{
 							Oval[y][x] |= (1<<o);
@@ -652,7 +628,6 @@ double calculate(int currBotColor)
 		soildpointscore += soildpoint[x] * soildmark[x] / 2;
 
 	MAXHEIGHT += 0.8 * MINHEIGHT;
-
 	
 	double allans[]={Heightdifferent,boardRowTransitions,MAXHEIGHT,boardWells,
 					 Holes[0],Holes[1],Holes[2],(double)longwell,soildpointscore};
@@ -784,23 +759,20 @@ void LASTAIGO(int blockType,int color)
 					A[lengthA++] = ((XX){x, y, o, nowscore});
 					retreated(color); 
 				}
-			} 
+			}
+
 	sort(A,A+lengthA);
 	for (int i = 0,j = 1;i < lengthA ; i++,j++)
 	{
 		double sum = 100000 ;
 		hzblock.set(A[i].x,A[i].y,A[i].o).tempplace();
-	//	if (A[i].x == 7 && A[i].y == 18) cout<<"a"<<A[i].value<<" "<<A[i].o<<endl;
-	//	if (A[i].x == 5 && A[i].y == 19) cout<<"b"<<A[i].value<<" "<<A[i].o<<endl;
 		Util::eliminate(color);
 		for (int ii = 1; ii <= allafter; ii++)
 		{
-			double tmp = A[i].value + solve(afterpoint[ii][0],color,1,deepth,ii,100000 - A[i].value);
+			double tmp = A[i].value + solve(afterpoint[ii][0],color,0,deepth,ii,100000 - A[i].value);
 			sum = min(sum , tmp);
 			if (sum <= ans) break;
 		}
-	//	if (A[i].x == 7 && A[i].y == 18) cout<<sum<<endl;
-	//	if (A[i].x == 5 && A[i].y == 19) cout<<sum<<endl;
 		retreated(color);
 		if (sum > ans)
 		{
@@ -852,11 +824,11 @@ void AIGO(int blockType,int color)
 		Util::eliminate(color);
 		for (int ii = 1; ii <= allafter; ii++)
 		{
-			double tmp = A[i].value + solve(afterpoint[ii][0],color,1,deepth,ii,100000);
+			double tmp = A[i].value + solve(afterpoint[ii][0],color,0,deepth,ii,100000);
 			tot += tmp;
 			sum = min(sum , tmp);
 		}
-		sum = sum + tot / allafter ; 
+		sum = sum + tot / allafter * R; 
 		retreated(color);
 		if (sum > ans)
 		{
@@ -872,26 +844,6 @@ void AIGO(int blockType,int color)
 void attack(int color)
 {
 	int lastblocktype = nextTypeForColor[color];
-	Tetris hzblock(lastblocktype,color);
-	
-	/*// trick
-	for (int i = 0 ; i < 7; i++)
-		if (typeCountForColor[color][i] != maxCount[color])
-		{
-			for (int x = 1; x <= MAPWIDTH; x++)
-				for (int y = MAPHEIGHT ; y >= 17 ; y--)
-				{
-					if ( gridInfo[color][y][x] == 1 ) break;
-					for (int o = 0; o < 4; o++)
-						if (hzblock.set(x, y, o).isValid())
-							goto out;
-				}
-			blockForEnemy = i;
-			return;
-			out:;
-		}
-	// end*/
-
 	allafter = 0;
 	int deepth = 2;
 	findafterpoint(color,0,deepth);
@@ -969,13 +921,7 @@ int main()
 			for (int x = 1; x <= MAPWIDTH;x++)
 				if (gridInfo[i][y][x])
 					BESTHIGHT[i]=y;
-	/*findallfx(blockType, currBotColor);
-	for (int i = MAPHEIGHT; i >= 1; i--) {
-		for (int j = 1; j <= MAPWIDTH; j++) {
-			cout<<Oval[i][j]<<" ";
-		}
-		cout<<endl;
-	}*/
+
 	if (Strategy == 0) AIGO(blockType,currBotColor);
 	else LASTAIGO(blockType,currBotColor);
 	Tetris hzblock(blockType,currBotColor);
@@ -984,7 +930,6 @@ int main()
 	Util::eliminate( currBotColor );
 	Util::transfer();
 
-	
 	attack(enemyColor);
 
 		// 决策结束，输出结果（你只需修改以上部分）
